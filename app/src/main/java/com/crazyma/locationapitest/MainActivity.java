@@ -1,6 +1,5 @@
 package com.crazyma.locationapitest;
 
-import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
@@ -9,6 +8,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -18,16 +18,21 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import static android.Manifest.permission.ACCESS_FINE_LOCATION;
-import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
-import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-import static java.security.AccessController.getContext;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
 
-public class MainActivity extends AppCompatActivity {
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener{
     private final String TAG = "crazyma";
-    private final int REQUEST_ACCESS_FINE_LOCATION = 8;
+    private final int REQUEST_ACCESS_FINE_LOCATION_1 = 8;
+    private final int REQUEST_ACCESS_FINE_LOCATION_2 = 82;
     private LocationManager mLocationManager;
     private String mProvider;
+
+    private GoogleApiClient mGoogleApiClient;
+    private Location mLastLocation;
 
     private TextView textView1, textView2;
 
@@ -38,13 +43,28 @@ public class MainActivity extends AppCompatActivity {
 
         textView1 = (TextView) findViewById(R.id.text_1);
         textView2 = (TextView) findViewById(R.id.text_2);
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if(mGoogleApiClient != null && !mGoogleApiClient.isConnected())
+            mGoogleApiClient.connect();
+    }
+
+    @Override
+    protected void onStop() {
+        if(mGoogleApiClient != null && mGoogleApiClient.isConnected())
+            mGoogleApiClient.disconnect();
+        super.onStop();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_ACCESS_FINE_LOCATION) {
+        if (requestCode == REQUEST_ACCESS_FINE_LOCATION_1) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 //  all permissions granted
                 getLocationInfo();
@@ -58,7 +78,42 @@ public class MainActivity extends AppCompatActivity {
                     Log.i(TAG, "onRequestPermissionsResult: permission denied and not rational dialog");
                 }
             }
+        }else if(requestCode == REQUEST_ACCESS_FINE_LOCATION_2){
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                //  all permissions granted
+                getLocationInfo2();
+            } else {
+                if (shouldShowRequestPermissionRationale(permissions[0])) {
+                    //  show rational dialog
+                    Log.i(TAG, "onRequestPermissionsResult: permission denied and need to show rational dialog");
+
+                } else {
+                    //  no rational dialog
+                    Log.i(TAG, "onRequestPermissionsResult: permission denied and not rational dialog");
+                }
+            }
         }
+    }
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        if(checkRequiredPermission()) {
+            mLastLocation = LocationServices.FusedLocationApi.getLastLocation(
+                    mGoogleApiClient);
+            if (mLastLocation != null) {
+                textView2.setText("Longitude : " + mLastLocation.getLongitude() + ", Latitude : " + mLastLocation.getLatitude());
+            }
+        }
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
     }
 
     public void buttonClick1(View v) {
@@ -67,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void buttonClick2(View v) {
-        textView2.setText("XD");
+        getLocationInfo2();
     }
 
     private boolean checkRequiredPermission() {
@@ -78,7 +133,25 @@ public class MainActivity extends AppCompatActivity {
             if (permission != PackageManager.PERMISSION_GRANTED) {  //未取得權限，向使用者要求允許權限
                 ActivityCompat.requestPermissions(this,
                         new String[]{ACCESS_FINE_LOCATION},
-                        REQUEST_ACCESS_FINE_LOCATION
+                        REQUEST_ACCESS_FINE_LOCATION_1
+                );
+                return false;
+            } else {    //已有權限
+                return true;
+            }
+        } else
+            return true;
+    }
+
+    private boolean checkRequiredPermission2() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int permission = ActivityCompat.checkSelfPermission(this,
+                    ACCESS_FINE_LOCATION);
+
+            if (permission != PackageManager.PERMISSION_GRANTED) {  //未取得權限，向使用者要求允許權限
+                ActivityCompat.requestPermissions(this,
+                        new String[]{ACCESS_FINE_LOCATION},
+                        REQUEST_ACCESS_FINE_LOCATION_2
                 );
                 return false;
             } else {    //已有權限
@@ -123,11 +196,25 @@ public class MainActivity extends AppCompatActivity {
                     }
                 });
 
-//                if (location != null) {
-//                    onLocationChanged(location);
-//                }else
-//                    Toast.makeText(this, "No Location Provider Found Check Your Code", Toast.LENGTH_SHORT).show();
+                if (location != null) {
+                    textView1.setText("Longitude : " + location.getLongitude() + ", Latitude : " + location.getLatitude());
+                }else
+                    Toast.makeText(this, "No Location Provider Found Check Your Code", Toast.LENGTH_SHORT).show();
             }
         }
+    }
+
+    private void getLocationInfo2(){
+        textView2.setText("XD");
+        if (mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+
+        if(!mGoogleApiClient.isConnected())
+            mGoogleApiClient.connect();
     }
 }
