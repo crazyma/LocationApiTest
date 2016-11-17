@@ -32,7 +32,9 @@ public class MainActivity extends AppCompatActivity{
 
     /*  This is for Android Location API    */
     private LocationManager mLocationManager;
+    private LocationListener mLocationListener;
     private String mProvider;
+
 
     /*  This is for Google Play Service */
     private GoogleApiClient mGoogleApiClient;
@@ -61,6 +63,12 @@ public class MainActivity extends AppCompatActivity{
     protected void onStop() {
         if(mGoogleApiClient != null && mGoogleApiClient.isConnected())
             mGoogleApiClient.disconnect();
+
+        if(mLocationManager != null &&
+                mLocationListener != null &&
+                checkRequiredPermission(REQUEST_ACCESS_FINE_LOCATION_API))
+            mLocationManager.removeUpdates(mLocationListener);
+
         super.onStop();
     }
 
@@ -128,7 +136,11 @@ public class MainActivity extends AppCompatActivity{
             if (mProvider != null && !mProvider.equals("")) {
 
                 Location location = mLocationManager.getLastKnownLocation(mProvider);
-                mLocationManager.requestLocationUpdates(mProvider, 5000, 1, new LocationListener() {
+                if (location != null) {
+                    textView1.setText("Longitude : " + location.getLongitude() + ", Latitude : " + location.getLatitude());
+                }
+
+                mLocationListener = new LocationListener() {
                     @Override
                     public void onLocationChanged(Location location) {
                         textView1.setText("Longitude : " + location.getLongitude() + ", Latitude : " + location.getLatitude());
@@ -148,12 +160,11 @@ public class MainActivity extends AppCompatActivity{
                     public void onProviderDisabled(String s) {
 
                     }
-                });
+                };
 
-                if (location != null) {
-                    textView1.setText("Longitude : " + location.getLongitude() + ", Latitude : " + location.getLatitude());
-                }
-            }
+                mLocationManager.requestLocationUpdates(mProvider, 5000, 1, mLocationListener);
+            }else
+                Toast.makeText(this,"There is no available Location Provider",Toast.LENGTH_LONG).show();
         }
     }
 
