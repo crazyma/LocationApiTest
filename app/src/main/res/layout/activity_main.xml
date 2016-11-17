@@ -20,7 +20,7 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="get location(1)"
+        android:text="via Location API"
         android:onClick="buttonClick1"/>
 
     <TextView
@@ -32,6 +32,6 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="get location(2)"
+        android:text="VIA Google Play Service"
         android:onClick="buttonClick2"/>
 </LinearLayout>
